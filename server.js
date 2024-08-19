@@ -14,10 +14,10 @@ const Enroll = require("./model/EnrollModel");
 // middleware
 const app = express();
 app.use(cors());
-app.use(cors({
-  origin: 'https://mindsparkpro.vercel.app/', // Your frontend Vercel URL
-  optionsSuccessStatus: 200
-}));
+// app.use(cors({
+//   origin: 'https://mindsparkpro.vercel.app/', // Your frontend Vercel URL
+//   optionsSuccessStatus: 200
+// }));
 app.use(bodyParser.json());
 app.use(
   "/files",
