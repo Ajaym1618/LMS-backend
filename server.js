@@ -10,10 +10,14 @@ const multer = require("multer");
 const userSignUp = require("./model/userSignUpModel");
 const educatorSignUp = require("./model/educatorSignUpModel");
 const courseDetails = require("./model/courseDetailsModel");
-
+const Enroll = require("./model/EnrollModel");
 // middleware
 const app = express();
 app.use(cors());
+app.use(cors({
+  origin: 'https://mindsparkpro.vercel.app/', // Your frontend Vercel URL
+  optionsSuccessStatus: 200
+}));
 app.use(bodyParser.json());
 app.use(
   "/files",
@@ -138,7 +142,71 @@ const verifyTokenStudent = (req, res, next) => {
   });
 };
 
-// get data for the managing purpose
+// get data of students
+app.get("/students", verifyTokenStudent, async (req, res) => {
+  try {
+    console.log("User ID from token:", req.studentId);
+    const student = await userSignUp.findById(req.studentId);
+    console.log("User found:", student);
+
+    if (!student) {
+      console.log("user not found");
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.status(200).json({ student });
+  } catch (err) {
+    console.log("Server error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// get data of particular course
+
+app.get("/particular/:id", async (req, res) => {
+  const id = req.params.id;
+  try {
+    // findById directly takes the ID as an argument
+    const newCourse = await courseDetails.findById(id);
+    if (!newCourse) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+    res.status(200).json(newCourse);
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// posting enroll data
+
+app.post("/enroll", async (req, res) => {
+  const { EnrollId, ParCourId, EnrollUserFullName, EnrollUserEmail } = req.body;
+  try {
+    const newEnroll = new Enroll({
+      EnrollId,
+      ParCourId,
+      EnrollUserFullName,
+      EnrollUserEmail,
+    });
+    await newEnroll.save();
+    res.status(200).json({ message: "Enrolled Successfully!" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "server error" });
+  }
+});
+
+// get enrolled data
+
+app.get("/get-enroll", verifyTokenStudent, async (req, res) => {
+  try {
+    console.log("enroll success");
+    const enroll = await Enroll.find({});
+    res.status(200).json({ enroll });
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ message: "server error" });
+  }
+});
 
 //---------------------------- educator -----------------------------------------------
 
@@ -311,8 +379,14 @@ app.post(
   ]),
   async (req, res) => {
     try {
-      const { courseId, educatorName, courseTitle, courseDescription, courseCategory, timeStamp } =
-        req.body;
+      const {
+        courseId,
+        educatorName,
+        courseTitle,
+        courseDescription,
+        courseCategory,
+        timeStamp,
+      } = req.body;
       const courseVideo = req.files["courseVideo"]
         ? req.files["courseVideo"][0].filename
         : null;
@@ -323,7 +397,7 @@ app.post(
 
       if (
         !courseId ||
-        !educatorName||
+        !educatorName ||
         !courseTitle ||
         !courseDescription ||
         !courseCategory ||
@@ -343,7 +417,7 @@ app.post(
         courseCategory,
         courseVideo,
         courseImage,
-        timeStamp
+        timeStamp,
       });
 
       await newCourse.save();
@@ -357,5 +431,40 @@ app.post(
   }
 );
 
+// specific course for educator
+app.get("/specific/:id", async (req, res) => {
+  const id = req.params.id;
+  try {
+    // findById directly takes the ID as an argument
+    const newCourse = await courseDetails.findById(id);
+    if (!newCourse) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+    res.status(200).json(newCourse);
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// deleting particular course
+app.delete("/delete/:id", async (req, res) => {
+  const id = req.params.id;
+  console.log(id);
+  
+  try {
+    const deleteCourse = await courseDetails.findById(id);
+    if(!deleteCourse){
+      return res.status(404).json({message:"Not found"});
+    }
+    await deleteCourse.deleteOne();
+    res.status(200).json({ message: "Course deleted successfully" });
+  } catch (err) {
+    res
+      .status(500)
+      .json({ message: "An error occurred while deleting the course",});
+  }
+});
+
+// port and listening
 const port = process.env.PORT || 5000;
 app.listen(port, () => console.log("Server connected to", port));
